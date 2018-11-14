@@ -321,7 +321,15 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
         try {
             // create a connection to the database
             CardDetails cardDetails = getCardDetails(new StringBuilder());
+
+            if (cardDetails == null) {
+                //TODO on close restart the init process
+                Welcome welcome = new Welcome(this);
+                welcome.setVisible(true);
+                return;
+            }
             GPData.CPLC cplc = cardDetails.getCplc();
+
             if (cplc == null) {
                 System.out.println("No CPLC data");
                 return;
@@ -368,7 +376,12 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
      * Card Production Life Cycle Data (CPLC data)
      */
     private CardDetails getCardDetails(StringBuilder statusMessage) {
+        if (cardReaderListComboBox.getSelectedItem() == null) {
+            System.out.println("No card reader is present.");
+            return null;
+        }
         String reader = cardReaderListComboBox.getSelectedItem().toString();
+
         if (reader != null && reader.length() > 0) {
             try {
                 CardTerminal cardTerminal = cardReaderMap.get(reader);
