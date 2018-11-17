@@ -187,6 +187,7 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
         } catch (Exception e) {
             // handle exception
         }
+
         //Code for creating and setting Java Card Applet files.
         File appStoreDir = new File(FileSystemView.getFileSystemView().getDefaultDirectory() + "/" + JC_APP_DIR);
         if (!appStoreDir.exists() || appStoreDir.isFile()) {
@@ -194,6 +195,8 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
                 JOptionPane.showMessageDialog(null, translate.get(3), "JCPlayStore", JOptionPane.INFORMATION_MESSAGE);
             }
         }
+
+        //App arguments
         try {
             args = parseArguments(new String[]{"--list"});
             if (args == null) {
@@ -212,6 +215,7 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
             version += ", Java " + System.getProperty("java.version");
             version += " by " + System.getProperty("java.vendor");
             System.out.println("GlobalPlatformPro " + version);
+
             try {
                 // Test for unlimited crypto
                 if (Cipher.getMaxAllowedKeyLength("AES") == 128) {
@@ -221,39 +225,11 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
                 Logger.getLogger(JCPlayStoreClient.class.getName()).log(Level.SEVERE, null, ex);
             }
 
-            //Try to get connected with card reader.
-            try {
-                final TerminalFactory tf;
-                tf = TerminalManager.getTerminalFactory((String) args.valueOf(OPT_TERMINALS));
-                CardTerminals terminals = tf.terminals();
-                // List terminals if needed
-                System.out.println("# Detected readers from " + tf.getProvider().getName());
-
-                int number = 0;
-                for (CardTerminal term : terminals.list()) {
-                    number++;
-                    cardReaderMap.put(term.getName(), term);
-                    System.out.println((term.isCardPresent() ? "[*] " : "[ ] ") + term.getName());
-                }
-
-                if (number == 0) {
-                    System.out.println("no readers.");
-                    Welcome welcome = new Welcome(this, translate);
-                    welcome.setVisible(true);
-                    //TODO RESTART
-                    this.dispose();
-                    return;
-                }
-            } catch (NoSuchAlgorithmException ex) {
-                JOptionPane.showMessageDialog(null, ex.getMessage(), "Start", JOptionPane.INFORMATION_MESSAGE);
-                Logger.getLogger(JCPlayStoreClient.class.getName()).log(Level.SEVERE, null, ex);
-            } catch (CardException ex) {
-                JOptionPane.showMessageDialog(null, ex.getMessage(), "Start", JOptionPane.INFORMATION_MESSAGE);
-                Logger.getLogger(JCPlayStoreClient.class.getName()).log(Level.SEVERE, null, ex);
+            if (!checkTerminals()) {
+                new Welcome(this, translate).setVisible(true);
+            } else {
+                setVisible(true);
             }
-            //finally window opened
-            //TODO DOESNT WORK
-            setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 
             //Initialize UI related componenets.
             //setLocationRelativeTo(null);
@@ -268,6 +244,33 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
             Logger.getLogger(JCPlayStoreClient.class.getName()).log(Level.SEVERE, null, ex);
             fail("IOException: " + ex.getMessage());
         }
+    }
+
+    public boolean checkTerminals() {
+        try {
+            final TerminalFactory tf;
+            tf = TerminalManager.getTerminalFactory((String) args.valueOf(OPT_TERMINALS));
+            CardTerminals terminals = tf.terminals();
+            // List terminals if needed
+            System.out.println("# Detected readers from " + tf.getProvider().getName());
+
+            int number = 0;
+            for (CardTerminal term : terminals.list()) {
+                number++;
+                cardReaderMap.put(term.getName(), term);
+                System.out.println((term.isCardPresent() ? "[*] " : "[ ] ") + term.getName());
+            }
+
+            if (number == 0) {
+                System.out.println("no readers.");
+                return false;
+            }
+        } catch (NoSuchAlgorithmException | CardException ex) {
+            JOptionPane.showMessageDialog(null, ex.getMessage(), "Start", JOptionPane.INFORMATION_MESSAGE);
+            Logger.getLogger(JCPlayStoreClient.class.getName()).log(Level.SEVERE, null, ex);
+            return false;
+        }
+        return true;
     }
 
     public static void connect() {
@@ -341,7 +344,7 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
             CardDetails cardDetails = getCardDetails(new StringBuilder());
 
             if (cardDetails == null) {
-                //TODO no terminal present
+                return;
             }
             GPData.CPLC cplc = cardDetails.getCplc();
 
@@ -649,7 +652,7 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
         jRadioButtonMenuItem1.setSelected(true);
         jRadioButtonMenuItem1.setText("jRadioButtonMenuItem1");
 
-        setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+        setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 
         //jLabel1.setText("WELCOME !!!");
 
@@ -1890,6 +1893,7 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
 //        });
     }
 
+
     /**
      * @param args the command line arguments
      */
@@ -1897,7 +1901,7 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                new JCPlayStoreClient().setVisible(true);
+                new JCPlayStoreClient(); //setting visible inside Welcome.java
             }
         });
     }
