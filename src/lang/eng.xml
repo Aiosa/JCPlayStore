@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<data>
+    <!-- format: <string id="<unique_number>"> Message </string> -->
+    <string id="1">Welcome to JCAppStore</string>
+    <string id="2">No card reader detected.</string>
+    <string id="3">Unable to create local App Store directory.</string>
+    <string id="4">Error while parsing arguments</string>
+    <string id="5">Constructor : Error while parsing arguments</string>
+    <string id="6">refresh</string>
+
+</data>

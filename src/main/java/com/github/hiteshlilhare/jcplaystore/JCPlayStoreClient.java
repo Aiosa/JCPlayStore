@@ -8,6 +8,7 @@ package com.github.hiteshlilhare.jcplaystore;
 import apdu4j.HexUtils;
 import apdu4j.TerminalManager;
 import java.awt.event.ItemEvent;
+import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -35,11 +36,7 @@ import javax.smartcardio.CardException;
 import javax.smartcardio.CardTerminal;
 import javax.smartcardio.CardTerminals;
 import javax.smartcardio.TerminalFactory;
-import javax.swing.JButton;
-import javax.swing.JFileChooser;
-import javax.swing.JOptionPane;
-import javax.swing.SwingUtilities;
-import javax.swing.UIManager;
+import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.filechooser.FileSystemView;
 import joptsimple.OptionException;
@@ -174,10 +171,15 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
     private final static String JC_DB_FILE = "jcsqlite.db";
     private final static String DB_URL = "jdbc:sqlite:" + FileSystemView.getFileSystemView().getDefaultDirectory() + "/" + JC_APP_DIR + "/" + JC_DB_FILE;
 
+    //Translation instance
+    private Translation translate;
+
     /**
      * Creates new form JCPlayStoreClient
      */
     public JCPlayStoreClient() {
+        translate = new Translation("eng"); //change to some custom
+
         try {
             // Set cross-platform Java L&F (also called "Metal")
             UIManager.setLookAndFeel(
@@ -189,14 +191,14 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
         File appStoreDir = new File(FileSystemView.getFileSystemView().getDefaultDirectory() + "/" + JC_APP_DIR);
         if (!appStoreDir.exists() || appStoreDir.isFile()) {
             if (!appStoreDir.mkdir()) {
-                JOptionPane.showMessageDialog(null, "Unable to create local App Store directory.", "JCPlayStore", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(null, translate.get(3), "JCPlayStore", JOptionPane.INFORMATION_MESSAGE);
             }
         }
         try {
             args = parseArguments(new String[]{"--list"});
             if (args == null) {
-                JOptionPane.showMessageDialog(null, "Error while parsing arguments");
-                fail("Constructor : Error while parsing arguments");
+                JOptionPane.showMessageDialog(null, translate.get(4));
+                fail(translate.get(5));
             }
             System.out.println(args.asMap());
             // Set up slf4j simple in a way that pleases us
@@ -226,9 +228,21 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
                 CardTerminals terminals = tf.terminals();
                 // List terminals if needed
                 System.out.println("# Detected readers from " + tf.getProvider().getName());
+
+                int number = 0;
                 for (CardTerminal term : terminals.list()) {
+                    number++;
                     cardReaderMap.put(term.getName(), term);
                     System.out.println((term.isCardPresent() ? "[*] " : "[ ] ") + term.getName());
+                }
+
+                if (number == 0) {
+                    System.out.println("no readers.");
+                    Welcome welcome = new Welcome(this, translate);
+                    welcome.setVisible(true);
+                    //TODO RESTART
+                    this.dispose();
+                    return;
                 }
             } catch (NoSuchAlgorithmException ex) {
                 JOptionPane.showMessageDialog(null, ex.getMessage(), "Start", JOptionPane.INFORMATION_MESSAGE);
@@ -237,6 +251,10 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
                 JOptionPane.showMessageDialog(null, ex.getMessage(), "Start", JOptionPane.INFORMATION_MESSAGE);
                 Logger.getLogger(JCPlayStoreClient.class.getName()).log(Level.SEVERE, null, ex);
             }
+            //finally window opened
+            //TODO DOESNT WORK
+            setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+
             //Initialize UI related componenets.
             //setLocationRelativeTo(null);
             initComponents();
@@ -323,10 +341,7 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
             CardDetails cardDetails = getCardDetails(new StringBuilder());
 
             if (cardDetails == null) {
-                //TODO on close restart the init process
-                Welcome welcome = new Welcome(this);
-                welcome.setVisible(true);
-                return;
+                //TODO no terminal present
             }
             GPData.CPLC cplc = cardDetails.getCplc();
 
@@ -634,9 +649,9 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
         jRadioButtonMenuItem1.setSelected(true);
         jRadioButtonMenuItem1.setText("jRadioButtonMenuItem1");
 
-        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 
-        jLabel1.setText("WELCOME !!!");
+        //jLabel1.setText("WELCOME !!!");
 
         jLabel2.setText("Card Reader List:");
 

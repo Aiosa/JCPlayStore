@@ -1,6 +1,5 @@
 package com.github.hiteshlilhare.jcplaystore;
 
-import sun.misc.JavaLangAccess;
 
 import javax.swing.*;
 import javax.swing.border.Border;
@@ -19,37 +18,94 @@ public class Welcome extends JDialog  {
     private JDialog context = this;
     private JPanel panel;
     private Dimension windowSize;
+    private Translation translation;
+
+    private GridBagConstraints constraints;
+    private GridBagLayout layout;
 
 
-    public Welcome(JFrame parentFrame) {
+    public Welcome(JFrame parentFrame, Translation translation) {
 
+        this.translation = translation;
         JFrame.setDefaultLookAndFeelDecorated(false); //ugly
         this.setUndecorated(true);
         this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        windowSize = new Dimension(550,
-                300);
-
+        windowSize = new Dimension(550, 300);
         this.setSize(windowSize);
 
+        panel = new background();
+        this.setContentPane(panel);
 
-        panel = (JPanel) this.getContentPane();
+        //panel = (JPanel) this.getContentPane();
+        layout = new GridBagLayout();
+        constraints = new GridBagConstraints();
+        constraints.weighty = 1;
+        constraints.anchor = GridBagConstraints.NORTHWEST;
+        panel.setLayout(layout);
 
-        panel.add(title());
-        panel.add(closeIcon());
-        //panel.add(text("It seems you have no card or card reader plugged in your computer."));
-        //TODO: detect card reader and close on input
+
+
+
+//        addToLayout(title(), 0, 0, 4);
+//        addToLayout(closeIcon(), 5, 0, 1);
+        addToLayout(closeIcon(), 6, 0, 1);
+        addToLayout(icon("src/img/baseline_usb_black_18dp"), 0, 1, 1);
+        addToLayout(text(translation.get(2)), 1, 1, 3);
+        addToLayout(refresh(), 1, 2, 3);
+
         this.setLocationRelativeTo(parentFrame);
     }
 
+    class background extends JPanel{
+        Image img;
+        private background(){
+            img = Toolkit.getDefaultToolkit().createImage("src/img/bg.jpg");
+        }
+        @Override
+        public void paintComponent(Graphics g)
+        {
+            g.drawImage(img,0,0,this);
+        }
+    }
+
+    private void addToLayout(Component what, int xwhere, int ywhere, int width) {
+        constraints.gridx = xwhere;
+        constraints.gridy = ywhere;
+        constraints.gridwidth = width;
+        add(what, constraints);
+    }
+
+    private JLabel refresh() {
+        JLabel label = new JLabel();
+        Font c = new Font("Courier", Font.PLAIN, 18);
+        label.setFont(c);
+        label.setText(translation.get(6));
+        label.setSize(windowSize.width, 80);
+        label.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() >= 1) {
+                    //TODO valid?
+                    java.awt.EventQueue.invokeLater(new Runnable() {
+                        public void run() {
+                            new JCPlayStoreClient().setVisible(true);
+                        }
+                    });
+                    context.dispose();
+                }
+            }
+        });
+        Border border = new EmptyBorder(10, 10, 10, 10);
+        label.setBorder(border);
+        return label;
+    }
 
 
     private JLabel closeIcon() {
         JLabel label = new JLabel();
         ImageIcon icon = new ImageIcon("src/img/baseline_close_black_18dp.png");
         label.setIcon(icon);
-        label.setBorder(new EmptyBorder(10, 10, 10, 10));
-        label.setHorizontalAlignment(SwingConstants.RIGHT);
-        label.setVerticalAlignment(SwingConstants.TOP);
+        label.setBorder(new EmptyBorder(10, 250, 10, 10));
         label.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -61,20 +117,17 @@ public class Welcome extends JDialog  {
         return label;
     }
 
-    private JLabel title() {
-        JLabel label = new JLabel();
-        Font c = new Font("Courier", Font.PLAIN, 22);
-        label.setFont(c);
-        label.setText("Welcome to JCAppStore");
-        label.setSize(windowSize.width, 120);
-
-        Border border = new EmptyBorder(20, 20, 20, 20);
-        label.setBorder(border);
-
-        label.setHorizontalAlignment(SwingConstants.CENTER);
-        label.setVerticalAlignment(SwingConstants.TOP);
-        return label;
-    }
+//    private JLabel title() {
+//        JLabel label = new JLabel();
+//        Font c = new Font("Courier", Font.PLAIN, 22);
+//        label.setFont(c);
+//        label.setText(translation.get(1));
+//        label.setSize(windowSize.width, 120);
+//
+//        Border border = new EmptyBorder(30, 140, 30, 110);
+//        label.setBorder(border);
+//        return label;
+//    }
 
     private JLabel text(String text) {
         JLabel label = new JLabel();
@@ -85,9 +138,16 @@ public class Welcome extends JDialog  {
 
         Border border = new EmptyBorder(10, 10, 10, 10);
         label.setBorder(border);
-
-        label.setHorizontalAlignment(SwingConstants.CENTER);
-        label.setVerticalAlignment(SwingConstants.CENTER);
         return label;
     }
+
+    private JLabel icon(String path) {
+        JLabel label = new JLabel();
+        ImageIcon icon = new ImageIcon(path);
+        label.setIcon(icon);
+        label.setBorder(new EmptyBorder(20, 20, 20, 20));
+        return label;
+    }
+
+
 }
