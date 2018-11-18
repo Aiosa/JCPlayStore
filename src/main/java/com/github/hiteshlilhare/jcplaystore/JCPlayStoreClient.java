@@ -9,11 +9,17 @@ import apdu4j.HexUtils;
 import apdu4j.TerminalManager;
 import java.awt.event.ItemEvent;
 import java.awt.event.WindowEvent;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
 import java.security.NoSuchAlgorithmException;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -23,6 +29,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.function.Function;
@@ -166,10 +173,13 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
     private final static String DEF_AID_COMBO_TXT = "<Please provide AID>";
     private final static String DEF_CAP_FILE_COMBO_TXT = "<Please provide CAP file path>";
 
-    // Database related constants.
+    // Database and app files related constants.
     private final static String JC_APP_DIR = "JCAPPStore";
     private final static String JC_DB_FILE = "jcsqlite.db";
     private final static String DB_URL = "jdbc:sqlite:" + FileSystemView.getFileSystemView().getDefaultDirectory() + "/" + JC_APP_DIR + "/" + JC_DB_FILE;
+
+    private final static String JC_OPT_FILE = "jcappstore.options";
+    private static HashMap<String, String> options = new HashMap<>();
 
     //Translation instance
     private Translation translate;
@@ -178,8 +188,6 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
      * Creates new form JCPlayStoreClient
      */
     public JCPlayStoreClient() {
-        translate = new Translation("eng"); //change to some custom
-
         try {
             // Set cross-platform Java L&F (also called "Metal")
             UIManager.setLookAndFeel(
@@ -195,6 +203,8 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
                 JOptionPane.showMessageDialog(null, translate.get(3), "JCPlayStore", JOptionPane.INFORMATION_MESSAGE);
             }
         }
+
+        translate = new Translation(options.get("lang"));
 
         //App arguments
         try {
@@ -229,21 +239,22 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
                 new Welcome(this, translate).setVisible(true);
             } else {
                 setVisible(true);
+                initAppComponents();
             }
-
-            //Initialize UI related componenets.
-            //setLocationRelativeTo(null);
-            initComponents();
-            debugRadioButtonMenuItem.setSelected(true);
-            commandComboBox.setSelectedIndex(0);
-            setInstallAppletWidgetsVisible(false);
-            //warningRadioButtonMenuItem.setSelected(true);
-            connectAndCreateTableIfNotExists();
-            insertCardDetailsIfNotExists();
         } catch (IOException ex) {
             Logger.getLogger(JCPlayStoreClient.class.getName()).log(Level.SEVERE, null, ex);
             fail("IOException: " + ex.getMessage());
         }
+    }
+
+    public void initAppComponents() {
+        initComponents();
+        debugRadioButtonMenuItem.setSelected(true);
+        commandComboBox.setSelectedIndex(0);
+        setInstallAppletWidgetsVisible(false);
+        //warningRadioButtonMenuItem.setSelected(true);
+        connectAndCreateTableIfNotExists();
+        insertCardDetailsIfNotExists();
     }
 
     public boolean checkTerminals() {
@@ -255,6 +266,7 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
             System.out.println("# Detected readers from " + tf.getProvider().getName());
 
             int number = 0;
+            cardReaderMap.clear();
             for (CardTerminal term : terminals.list()) {
                 number++;
                 cardReaderMap.put(term.getName(), term);
@@ -395,7 +407,6 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
      */
     private CardDetails getCardDetails(StringBuilder statusMessage) {
         if (cardReaderListComboBox.getSelectedItem() == null) {
-            System.out.println("No card reader is present.");
             return null;
         }
         String reader = cardReaderListComboBox.getSelectedItem().toString();
@@ -1893,17 +1904,43 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
 //        });
     }
 
+    private static void getFileOptions() throws IOException{
+        if(options.size() != 0) return; //already loaded
+        File file = new File(FileSystemView.getFileSystemView().getDefaultDirectory() + "/" + JC_APP_DIR + "/" + JC_OPT_FILE);
 
-    /**
-     * @param args the command line arguments
-     */
-    public static void main(String args[]) {
+        if (!file.createNewFile()) {
+            try (BufferedReader r = new BufferedReader(new FileReader(file))) {
+                String line;
+                while ((line = r.readLine()) != null) {
+                    String[] content = line.split("=");
+                    options.put(content[0], content[1]);
+                }
+            }
+            run();
+        } else {
+            new TranslationSetup(file, options).setVisible(true);
+        }
+    }
+
+    public static void run() {
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
                 new JCPlayStoreClient(); //setting visible inside Welcome.java
             }
         });
+    }
+
+    /**
+     * @param args the command line arguments
+     */
+    public static void main(String args[]) {
+        try {
+            getFileOptions();
+        } catch (IOException e) {
+            options.put("lang", "eng");
+            e.printStackTrace();
+        }
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables

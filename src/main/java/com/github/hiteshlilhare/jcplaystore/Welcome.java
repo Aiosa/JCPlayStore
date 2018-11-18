@@ -52,7 +52,7 @@ public class Welcome extends JDialog {
         addToLayout(text(translation.get(2)), 1, 1, 3);
         addToLayout(refresh(), 1, 2, 3);
         loading = loading();
-        addToLayout(loading, 5, 2,1);
+        addToLayout(loading, 4, 2,1);
         setLocationRelativeTo(parent);
     }
 
@@ -93,6 +93,7 @@ public class Welcome extends JDialog {
                 if (e.getClickCount() >= 1) {
                     showLoading();
                     if (parent.checkTerminals()) {
+                        parent.initAppComponents();
                         parent.setVisible(true);
                         context.dispose();
                     }
@@ -165,6 +166,7 @@ public class Welcome extends JDialog {
         if (loading.isVisible()) return;
         loading.setVisible(true);
         PauseTransition pause = new PauseTransition( Duration.seconds(1) );
+        //TODO doesn't hide
         pause.setOnFinished(event ->
                 loading.setVisible(false)
         );

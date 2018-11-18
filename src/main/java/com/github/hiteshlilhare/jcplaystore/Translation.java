@@ -20,7 +20,7 @@ public class Translation {
 
     Translation (String lang) {
         if (!init(lang, 1)) {
-            System.exit(1); //unable to get translation
+            throw new IllegalArgumentException("Could not deduce a language: " + lang);
         }
     }
 
