@@ -8,18 +8,13 @@ package com.github.hiteshlilhare.jcplaystore;
 import apdu4j.HexUtils;
 import apdu4j.TerminalManager;
 import java.awt.event.ItemEvent;
-import java.awt.event.WindowEvent;
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
 import java.security.NoSuchAlgorithmException;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -32,7 +27,6 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -56,9 +50,7 @@ import static pro.javacard.gp.GPData.CPLC.toDateFailsafe;
 import static pro.javacard.gp.GPData.fetchCPLC;
 import static pro.javacard.gp.GPData.fetchKeyInfoTemplate;
 import static pro.javacard.gp.GPData.getData;
-import static pro.javacard.gp.GPData.pretty_print_card_capabilities;
-import static pro.javacard.gp.GPData.pretty_print_card_data;
-import static pro.javacard.gp.GPData.pretty_print_key_template;
+
 import pro.javacard.gp.GPDataException;
 import pro.javacard.gp.GPException;
 import pro.javacard.gp.GPKey;
@@ -164,11 +156,14 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
     // GlobalPlatform specific
     private GlobalPlatform gp = null;
     private TreeMap<String, CardTerminal> cardReaderMap = new TreeMap<>();
-    private final static String CMD_CONNECT = "Connect";
-    private final static String CMD_LIST = "List";
-    private final static String CMD_INSTALL = "Install";
-    private final static String CMD_DELETE = "Delete";
-    private String[] commandList = new String[]{CMD_CONNECT, CMD_LIST, CMD_INSTALL, CMD_DELETE};
+//    private final static String CMD_CONNECT = "Connect";
+//    private final static String CMD_LIST = "List";
+//    private final static String CMD_INSTALL = "Install";
+//    private final static String CMD_DELETE = "Delete";
+    private final static int CMD_CONNECT = 0;
+    private final static int CMD_LIST = 1;
+    private final static int CMD_INSTALL = 2;
+    private final static int CMD_DELETE = 3;
 
     private final static String DEF_AID_COMBO_TXT = "<Please provide AID>";
     private final static String DEF_CAP_FILE_COMBO_TXT = "<Please provide CAP file path>";
@@ -179,10 +174,9 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
     private final static String DB_URL = "jdbc:sqlite:" + FileSystemView.getFileSystemView().getDefaultDirectory() + "/" + JC_APP_DIR + "/" + JC_DB_FILE;
 
     private final static String JC_OPT_FILE = "jcappstore.options";
-    private static HashMap<String, String> options = new HashMap<>();
-
-    //Translation instance
-    private Translation translate;
+    //Translation instance and options hashmap shared in package
+    static HashMap<String, String> options = new HashMap<>();
+    static Translation translate;
 
     /**
      * Creates new form JCPlayStoreClient
@@ -203,7 +197,6 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
                 JOptionPane.showMessageDialog(null, translate.get(3), "JCPlayStore", JOptionPane.INFORMATION_MESSAGE);
             }
         }
-
         translate = new Translation(options.get("lang"));
 
         //App arguments
@@ -236,11 +229,12 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
             }
 
             if (!checkTerminals()) {
-                new Welcome(this, translate).setVisible(true);
+                new Welcome(this).setVisible(true);
             } else {
-                setVisible(true);
                 initAppComponents();
+                setVisible(true);
             }
+
         } catch (IOException ex) {
             Logger.getLogger(JCPlayStoreClient.class.getName()).log(Level.SEVERE, null, ex);
             fail("IOException: " + ex.getMessage());
@@ -667,19 +661,24 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
 
         //jLabel1.setText("WELCOME !!!");
 
-        jLabel2.setText("Card Reader List:");
+        jLabel2.setText(translate.get(50));
 
         cardReaderListComboBox.setModel(new javax.swing.DefaultComboBoxModel<>(cardReaderMap.keySet().toArray(new String[cardReaderMap.size()])));
 
-        goButton.setText("Go");
+        goButton.setText(translate.get(51));
         goButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 goButtonActionPerformed(evt);
             }
         });
 
-        jLabel3.setText("Command:");
+        jLabel3.setText(translate.get(52));
 
+        String[] commandList = new String[]{translate.get(44),
+                translate.get(45),
+                translate.get(29),
+                translate.get(8),
+        };
         commandComboBox.setModel(new javax.swing.DefaultComboBoxModel<>(commandList));
         commandComboBox.addItemListener(new java.awt.event.ItemListener() {
             public void itemStateChanged(java.awt.event.ItemEvent evt) {
@@ -692,11 +691,11 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
         statusTextArea.setRows(5);
         jScrollPane1.setViewportView(statusTextArea);
 
-        jLabel4.setText("Status:");
+        jLabel4.setText(translate.get(53));
 
-        commonLabel.setText("CAP File:");
+        commonLabel.setText(translate.get(17) + ":");
 
-        commonButton.setText("Select CAP File");
+        commonButton.setText(translate.get(16));
         commonButton.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 commonButtonActionPerformed(evt);
@@ -705,13 +704,13 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
 
         commonComboBox.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
 
-        fileMenu.setText("File");
+        fileMenu.setText(translate.get(54));
         jMenuBarMain.add(fileMenu);
 
-        tasksMenu.setText("Tasks");
+        tasksMenu.setText(translate.get(55));
 
         listCardReadersMenuItem.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_R, java.awt.event.InputEvent.CTRL_MASK));
-        listCardReadersMenuItem.setText("List Card Readers");
+        listCardReadersMenuItem.setText(translate.get(56));
         listCardReadersMenuItem.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 listCardReadersMenuItemActionPerformed(evt);
@@ -721,12 +720,12 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
 
         jMenuBarMain.add(tasksMenu);
 
-        settingMenu.setText("Setting");
+        settingMenu.setText(translate.get(57));
         buttonGroup1.add(settingMenu);
 
         warningRadioButtonMenuItem.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_W, java.awt.event.InputEvent.CTRL_MASK));
         buttonGroup1.add(warningRadioButtonMenuItem);
-        warningRadioButtonMenuItem.setText("Warning");
+        warningRadioButtonMenuItem.setText(translate.get(58));
         warningRadioButtonMenuItem.addItemListener(new java.awt.event.ItemListener() {
             public void itemStateChanged(java.awt.event.ItemEvent evt) {
                 warningRadioButtonMenuItemItemStateChanged(evt);
@@ -737,7 +736,7 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
         verboseRadioButtonMenuItem.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_V, java.awt.event.InputEvent.CTRL_MASK));
         buttonGroup1.add(verboseRadioButtonMenuItem);
         verboseRadioButtonMenuItem.setSelected(true);
-        verboseRadioButtonMenuItem.setText("Verbose");
+        verboseRadioButtonMenuItem.setText(translate.get(59));
         verboseRadioButtonMenuItem.addItemListener(new java.awt.event.ItemListener() {
             public void itemStateChanged(java.awt.event.ItemEvent evt) {
                 verboseRadioButtonMenuItemItemStateChanged(evt);
@@ -747,7 +746,7 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
 
         debugRadioButtonMenuItem.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_D, java.awt.event.InputEvent.CTRL_MASK));
         buttonGroup1.add(debugRadioButtonMenuItem);
-        debugRadioButtonMenuItem.setText("Debug");
+        debugRadioButtonMenuItem.setText(translate.get(60));
         debugRadioButtonMenuItem.addItemListener(new java.awt.event.ItemListener() {
             public void itemStateChanged(java.awt.event.ItemEvent evt) {
                 debugRadioButtonMenuItemItemStateChanged(evt);
@@ -876,8 +875,9 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
 //        });
 
         //////
-        String command = commandComboBox.getSelectedItem().toString();
-        if (command != null && command.length() > 0) {
+        //TODO upravit
+        int command = commandComboBox.getSelectedIndex();
+        if ((0 <= command) && (command < 4)) {
             switch (command) {
                 case CMD_CONNECT:
                     StringBuilder statusMessage = new StringBuilder();
@@ -893,31 +893,32 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
                 case CMD_INSTALL:
                     if (commonComboBox.getSelectedItem() == null || commonComboBox.getSelectedItem().toString().length() == 0
                             || commonComboBox.getSelectedItem().toString().equals(DEF_CAP_FILE_COMBO_TXT)) {
-                        JOptionPane.showMessageDialog(this, "Please provice correct CAP file path.", "Delete", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(this, translate.get(9), translate.get(8), JOptionPane.ERROR_MESSAGE);
                         return;
                     }
                     statusMessage = new StringBuilder();
                     File capfile = new File(commonComboBox.getSelectedItem().toString());
                     if (capfile.exists() && capfile.isFile()) {
-                        statusTextArea.setText("Installing Applet..." + System.lineSeparator());
+                        statusTextArea.setText(translate.get(10) + System.lineSeparator());
                         //updateTextArea("Installing Applet..." +  System.lineSeparator(), false);
                         installApplet(capfile, statusMessage);
                         statusTextArea.append(statusMessage.toString());
                     } else {
-                        statusTextArea.setText("Please select a CAP file");
+                        statusTextArea.setText(translate.get(11));
                     }
                     break;
                 case CMD_DELETE:
                     if (commonComboBox.getSelectedItem() == null || commonComboBox.getSelectedItem().toString().length() == 0
                             || commonComboBox.getSelectedItem().toString().equals(DEF_AID_COMBO_TXT)) {
-                        JOptionPane.showMessageDialog(this, "Please provide proper AID.", "Delete", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(this, translate.get(12), "" +
+                                translate.get(8), JOptionPane.ERROR_MESSAGE);
                         return;
                     }
                     statusMessage = new StringBuilder();
                     AID aid = AID.fromString(commonComboBox.getSelectedItem().toString());
                     //statusMessage.append("Deleting ").append(commonComboBox.getSelectedItem().toString()).append(" Applet...").append(System.lineSeparator());
                     //updateTextArea("Deleting " + commonComboBox.getSelectedItem().toString() + " Applet..." + System.lineSeparator(),false);
-                    statusTextArea.setText("Deleting " + commonComboBox.getSelectedItem().toString() + " Applet..." + System.lineSeparator());
+                    statusTextArea.setText(translate.get(13) + " " + commonComboBox.getSelectedItem().toString() + " " + translate.get(14) + "..." + System.lineSeparator());
                     deleteInstalledApplets(aid, statusMessage);
                     statusTextArea.append(statusMessage.toString());
                     populateInstalledAppletCombobox();
@@ -931,16 +932,17 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
     private void commandComboBoxItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_commandComboBoxItemStateChanged
         // TODO add your handling code here:
         if (evt.getStateChange() == ItemEvent.SELECTED) {
-            System.out.println("Item: " + evt.getItem());
+            System.out.println(translate.get(15) + ": " + evt.getItem());
+           //
             if (evt.getItem().toString().equals(CMD_INSTALL)) {
-                commonButton.setText("Select CAP File");
-                commonLabel.setText("CAP File: ");
+                commonButton.setText(translate.get(16));
+                commonLabel.setText(translate.get(17) + ": ");
                 commonComboBox.setModel(new javax.swing.DefaultComboBoxModel<>(new String[]{DEF_CAP_FILE_COMBO_TXT}));
                 commonComboBox.setEnabled(false);
                 setInstallAppletWidgetsVisible(true);
             } else if (evt.getItem().toString().equals(CMD_DELETE)) {
                 //setInstallAppletWidgetsVisible(false);
-                commonButton.setText("List Installed Applets");
+                commonButton.setText(translate.get(18));
                 commonLabel.setText("AID: ");
                 commonComboBox.setEnabled(true);
                 commonComboBox.setModel(new javax.swing.DefaultComboBoxModel<>(new String[]{DEF_AID_COMBO_TXT}));
@@ -953,7 +955,7 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
 
     private void commonButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_commonButtonActionPerformed
         // TODO add your handling code here:
-        if (((JButton) evt.getSource()).getText().equals("Select CAP File")) {
+        if (((JButton) evt.getSource()).getText().equals(translate.get(16))) {
             // create an object of JFileChooser class 
             JFileChooser fileChooser = new JFileChooser(FileSystemView.getFileSystemView().getDefaultDirectory());
             File appStoreDir = new File(FileSystemView.getFileSystemView().getDefaultDirectory() + "/JCAPPStore");
@@ -977,9 +979,9 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
                 commonComboBox.setModel(new javax.swing.DefaultComboBoxModel<>(new String[]{fileChooser.getSelectedFile().getAbsolutePath()}));
             } // if the user cancelled the operation 
             else {
-                commonComboBox.setModel(new javax.swing.DefaultComboBoxModel<>(new String[]{"<Please provide CAP file path>"}));
+                commonComboBox.setModel(new javax.swing.DefaultComboBoxModel<>(new String[]{translate.get(19)}));
             }
-        } else if (((JButton) evt.getSource()).getText().equals("List Installed Applets")) {
+        } else if (((JButton) evt.getSource()).getText().equals(translate.get(18))) {
             populateInstalledAppletCombobox();
         }
     }//GEN-LAST:event_commonButtonActionPerformed
@@ -1075,7 +1077,7 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
                                 } else {
                                     if (needsAuthentication(args)) {
                                         System.out.println("Warning: no keys given, using default test key " + HexUtils.bin2hex(GPData.getDefaultKey().getBytes()));
-                                        statusMessage.append("Warning: no keys given, using default test key " + HexUtils.bin2hex(GPData.getDefaultKey().getBytes())).append(System.lineSeparator());
+                                        statusMessage.append(translate.get(20)).append(HexUtils.bin2hex(GPData.getDefaultKey().getBytes())).append(System.lineSeparator());
                                     }
                                     keyz = PlaintextKeys.fromMasterKey(GPData.getDefaultKey());
                                 }
@@ -1129,7 +1131,7 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
                         }
                     } catch (CardException e) {
                         System.err.println("Could not connect to " + cardTerminal.getName() + ": " + TerminalManager.getExceptionMessage(e));
-                        statusMessage.append("Could not connect to ").append(cardTerminal.getName()).append(": ").append(TerminalManager.getExceptionMessage(e)).append(System.lineSeparator());
+                        statusMessage.append(translate.get(21)).append(cardTerminal.getName()).append(": ").append(TerminalManager.getExceptionMessage(e)).append(System.lineSeparator());
                     } catch (GPException ex) {
                         Logger.getLogger(JCPlayStoreClient.class.getName()).log(Level.SEVERE, null, ex);
                     } finally {
@@ -1141,7 +1143,7 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
                     }
                 } else {
                     System.out.println("Card is not present!!!");
-                    statusMessage.append("Card is not present!!!").append(System.lineSeparator());
+                    statusMessage.append(translate.get(22)).append(System.lineSeparator());
                 }
             } catch (CardException ex) {
                 JOptionPane.showMessageDialog(this, ex.getMessage(), "List", JOptionPane.INFORMATION_MESSAGE);
@@ -1228,7 +1230,7 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
                                 } else {
                                     if (needsAuthentication(args)) {
                                         System.out.println("Warning: no keys given, using default test key " + HexUtils.bin2hex(GPData.getDefaultKey().getBytes()));
-                                        statusMessage.append("Warning: no keys given, using default test key " + HexUtils.bin2hex(GPData.getDefaultKey().getBytes())).append(System.lineSeparator());
+                                        statusMessage.append(translate.get(20)).append(HexUtils.bin2hex(GPData.getDefaultKey().getBytes())).append(System.lineSeparator());
                                     }
                                     keyz = PlaintextKeys.fromMasterKey(GPData.getDefaultKey());
                                 }
@@ -1295,11 +1297,11 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
                                     }
                                     gp.loadCapFile(instcap, target);
                                     System.out.println("CAP loaded");
-                                    statusMessage.append("CAP loaded").append(System.lineSeparator());
+                                    statusMessage.append(translate.get(23)).append(System.lineSeparator());
                                 } catch (GPException e) {
                                     if (e.sw == 0x6985 || e.sw == 0x6A80) {
                                         System.err.println("Loading failed. Are you sure the CAP file (JC version, packages, sizes) is compatible with your card?");
-                                        statusMessage.append("Loading failed. Are you sure the CAP file (JC version, packages, sizes) is compatible with your card?");
+                                        statusMessage.append(translate.get(24));
                                     }
                                     throw e;
                                 }
@@ -1315,7 +1317,7 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
                                     appaid = AID.fromString(args.valueOf(OPT_APPLET));
                                 } else {
                                     //fail("CAP contains more than one applet, specify the right one with --" + OPT_APPLET);
-                                    statusMessage.append("CAP contains more than one applet, specify the right one with --" + OPT_APPLET).append(System.lineSeparator());
+                                    statusMessage.append(translate.get(25)).append(OPT_APPLET).append(System.lineSeparator());
                                     return false;
                                 }
                             } else {
@@ -1338,32 +1340,26 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
                             // warn
                             if (gp.getRegistry().allAppletAIDs().contains(instanceaid)) {
                                 System.err.println("WARNING: Applet " + instanceaid + " already present on card");
-                                statusMessage.append("WARNING: Applet " + instanceaid + " already present on card").append(System.lineSeparator());
+                                statusMessage.append(translate.get(26)).append(instanceaid).append(translate.get(27)).append(System.lineSeparator());
                             }
 
                             // shoot
                             //statusMessage.append("Installing ").append(HexUtils.bin2hex(appaid.getBytes())).append(" Applet...").append(System.lineSeparator());
                             gp.installAndMakeSelectable(instcap.getPackageAID(), appaid, instanceaid, privs, getInstParams(args), null);
-                            statusMessage.append("Applet ").append(HexUtils.bin2hex(appaid.getBytes())).append(" installed!!!").append(System.lineSeparator());
+                            statusMessage.append(translate.get(14)).append(" ").append(HexUtils.bin2hex(appaid.getBytes())).append(translate.get(28)).append(System.lineSeparator());
                             //}
                         }
                         /////////////////
                         return true;
                     } catch (CardException e) {
-                        JOptionPane.showMessageDialog(this, e.getMessage(), "Install", JOptionPane.INFORMATION_MESSAGE);
+                        JOptionPane.showMessageDialog(this, e.getMessage(), translate.get(29), JOptionPane.INFORMATION_MESSAGE);
                         System.err.println("Could not connect to " + cardTerminal.getName() + ": " + TerminalManager.getExceptionMessage(e));
-                        statusMessage.append("Could not connect to ").append(cardTerminal.getName()).append(": ").append(TerminalManager.getExceptionMessage(e)).append(System.lineSeparator());
-                    } catch (GPException ex) {
-                        JOptionPane.showMessageDialog(this, ex.getMessage(), "Install", JOptionPane.INFORMATION_MESSAGE);
-                        Logger.getLogger(JCPlayStoreClient.class.getName()).log(Level.SEVERE, null, ex);
-                    } catch (FileNotFoundException ex) {
-                        JOptionPane.showMessageDialog(this, ex.getMessage(), "Install", JOptionPane.INFORMATION_MESSAGE);
-                        Logger.getLogger(JCPlayStoreClient.class.getName()).log(Level.SEVERE, null, ex);
-                    } catch (IOException ex) {
-                        JOptionPane.showMessageDialog(this, ex.getMessage(), "Install", JOptionPane.INFORMATION_MESSAGE);
+                        statusMessage.append(translate.get(21)).append(cardTerminal.getName()).append(": ").append(TerminalManager.getExceptionMessage(e)).append(System.lineSeparator());
+                    } catch (GPException | FileNotFoundException ex) {
+                        JOptionPane.showMessageDialog(this, ex.getMessage(), translate.get(29), JOptionPane.INFORMATION_MESSAGE);
                         Logger.getLogger(JCPlayStoreClient.class.getName()).log(Level.SEVERE, null, ex);
                     } catch (Exception e) {
-                        JOptionPane.showMessageDialog(this, e.getMessage(), "Install", JOptionPane.INFORMATION_MESSAGE);
+                        JOptionPane.showMessageDialog(this, e.getMessage(), translate.get(29), JOptionPane.INFORMATION_MESSAGE);
                     } finally {
                         if (card != null) {
                             card.endExclusive();
@@ -1373,7 +1369,7 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
                     }
                 } else {
                     System.out.println("Card is not present!!!");
-                    statusMessage.append("Card is not present!!!").append(System.lineSeparator());
+                    statusMessage.append(translate.get(22)).append(System.lineSeparator());
                 }
             } catch (CardException ex) {
                 Logger.getLogger(JCPlayStoreClient.class.getName()).log(Level.SEVERE, null, ex);
@@ -1475,7 +1471,7 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
                                 } else {
                                     if (needsAuthentication(args)) {
                                         System.out.println("Warning: no keys given, using default test key " + HexUtils.bin2hex(GPData.getDefaultKey().getBytes()));
-                                        statusMessage.append("Warning: no keys given, using default test key " + HexUtils.bin2hex(GPData.getDefaultKey().getBytes())).append(System.lineSeparator());
+                                        statusMessage.append(translate.get(20) + HexUtils.bin2hex(GPData.getDefaultKey().getBytes())).append(System.lineSeparator());
                                     }
                                     keyz = PlaintextKeys.fromMasterKey(GPData.getDefaultKey());
                                 }
@@ -1533,7 +1529,7 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
                     } catch (CardException e) {
                         JOptionPane.showMessageDialog(this, e.getMessage(), "Delete", JOptionPane.INFORMATION_MESSAGE);
                         System.err.println("Could not connect to " + cardTerminal.getName() + ": " + TerminalManager.getExceptionMessage(e));
-                        statusMessage.append("Could not connect to ").append(cardTerminal.getName()).append(": ").append(TerminalManager.getExceptionMessage(e)).append(System.lineSeparator());
+                        statusMessage.append(translate.get(21)).append(cardTerminal.getName()).append(": ").append(TerminalManager.getExceptionMessage(e)).append(System.lineSeparator());
                     } catch (GPException ex) {
                         JOptionPane.showMessageDialog(this, ex.getMessage(), "Delete", JOptionPane.INFORMATION_MESSAGE);
                         Logger.getLogger(JCPlayStoreClient.class.getName()).log(Level.SEVERE, null, ex);
@@ -1546,7 +1542,7 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
                     }
                 } else {
                     System.out.println("Card is not present!!!");
-                    statusMessage.append("Card is not present!!!").append(System.lineSeparator());
+                    statusMessage.append(translate.get(22)).append(System.lineSeparator());
                 }
             } catch (CardException ex) {
                 Logger.getLogger(JCPlayStoreClient.class.getName()).log(Level.SEVERE, null, ex);
@@ -1632,7 +1628,7 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
                                 } else {
                                     if (needsAuthentication(args)) {
                                         System.out.println("Warning: no keys given, using default test key " + HexUtils.bin2hex(GPData.getDefaultKey().getBytes()));
-                                        statusMessage.append("Warning: no keys given, using default test key " + HexUtils.bin2hex(GPData.getDefaultKey().getBytes())).append(System.lineSeparator());
+                                        statusMessage.append(translate.get(20)).append(HexUtils.bin2hex(GPData.getDefaultKey().getBytes())).append(System.lineSeparator());
                                     }
                                     keyz = PlaintextKeys.fromMasterKey(GPData.getDefaultKey());
                                 }
@@ -1686,16 +1682,16 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
                                             StringBuilder msg = new StringBuilder();
                                             GPRegistryEntryPkg pkg = (GPRegistryEntryPkg) e;
                                             if (pkg.getModules().size() > 0) {
-                                                msg.append("Selected Package AID ");
+                                                msg.append(translate.get(31));
                                                 if (pkg.getVersion() != null) {
-                                                    msg.append("Version: ").append(pkg.getVersionString()).append(" ");
+                                                    msg.append(translate.get(32)).append(pkg.getVersionString()).append(" ");
                                                 }
-                                                msg.append("contains following applications").append(System.lineSeparator());
+                                                msg.append(translate.get(33)).append(System.lineSeparator());
                                                 for (AID a : pkg.getModules()) {
                                                     msg.append(GPUtils.byteArrayToReadableString(a.getBytes())).append(HexUtils.bin2hex(a.getBytes())).append(System.lineSeparator());
                                                 }
-                                                msg.append("Would you like to delete?");
-                                                int option = JOptionPane.showConfirmDialog(this, msg.toString(), "Delete", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+                                                msg.append(translate.get(34));
+                                                int option = JOptionPane.showConfirmDialog(this, msg.toString(), translate.get(8), JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
                                                 if (option == JOptionPane.YES_OPTION) {
                                                     gp.deleteAID(aid, true);
                                                 }
@@ -1711,17 +1707,17 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
                                 }
                                 //gp.deleteAID(aid, reg.allPackageAIDs().contains(aid) || args.has(OPT_FORCE));
                                 System.out.println("Deleted successfully!!!");
-                                statusMessage.append("Deleted successfully!!!").append(System.lineSeparator());
+                                statusMessage.append(translate.get(35)).append(System.lineSeparator());
                             } catch (GPException e) {
                                 if (!gp.getRegistry().allAIDs().contains(aid)) {
                                     System.err.println("Could not delete AID (not present on card): " + aid);
-                                    statusMessage.append("Could not delete AID (not present on card): " + aid).append(System.lineSeparator());
+                                    statusMessage.append(translate.get(36)).append(translate.get(37)).append(": ").append(aid).append(System.lineSeparator());
                                 } else {
                                     System.err.println("Could not delete AID: " + aid);
-                                    statusMessage.append("Could not delete AID: " + aid).append(System.lineSeparator());
+                                    statusMessage.append(translate.get(36)).append(": ").append(aid).append(System.lineSeparator());
                                     if (e.sw == 0x6985) {
                                         System.err.println("Deletion not allowed. Some app still active?");
-                                        statusMessage.append("Deletion not allowed. Some app still active?").append(System.lineSeparator());
+                                        statusMessage.append(translate.get(38)).append(System.lineSeparator());
                                     } else {
                                         throw e;
                                     }
@@ -1733,7 +1729,7 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
                     } catch (CardException e) {
                         JOptionPane.showMessageDialog(this, e.getMessage(), "Delete", JOptionPane.INFORMATION_MESSAGE);
                         System.err.println("Could not connect to " + cardTerminal.getName() + ": " + TerminalManager.getExceptionMessage(e));
-                        statusMessage.append("Could not connect to ").append(cardTerminal.getName()).append(": ").append(TerminalManager.getExceptionMessage(e)).append(System.lineSeparator());
+                        statusMessage.append(translate.get(21)).append(cardTerminal.getName()).append(": ").append(TerminalManager.getExceptionMessage(e)).append(System.lineSeparator());
                     } catch (GPException ex) {
                         JOptionPane.showMessageDialog(this, ex.getMessage(), "Delete", JOptionPane.INFORMATION_MESSAGE);
                         Logger.getLogger(JCPlayStoreClient.class.getName()).log(Level.SEVERE, null, ex);
@@ -1746,10 +1742,10 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
                     }
                 } else {
                     System.out.println("Card is not present!!!");
-                    statusMessage.append("Card is not present!!!").append(System.lineSeparator());
+                    statusMessage.append(translate.get(22)).append(System.lineSeparator());
                 }
             } catch (CardException ex) {
-                JOptionPane.showMessageDialog(this, ex.getMessage(), "Delete", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this, ex.getMessage(), translate.get(8), JOptionPane.INFORMATION_MESSAGE);
                 Logger.getLogger(JCPlayStoreClient.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
@@ -1794,17 +1790,17 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
             }
 
             if (e.getDomain() != null) {
-                out.append(tab + "Parent:  " + e.getDomain()).append(System.lineSeparator());
+                out.append(tab).append(translate.get(39)).append(e.getDomain()).append(System.lineSeparator());
             }
             if (e.getType() == GPRegistryEntry.Kind.ExecutableLoadFile) {
                 GPRegistryEntryPkg pkg = (GPRegistryEntryPkg) e;
                 if (pkg.getVersion() != null) {
-                    out.append(tab + "Version: " + pkg.getVersionString()).append(System.lineSeparator());
+                    out.append(tab).append(translate.get(32)).append(pkg.getVersionString()).append(System.lineSeparator());
                 }
                 for (AID a : pkg.getModules()) {
-                    out.append(tab + "Applet:  " + HexUtils.bin2hex(a.getBytes())).append(System.lineSeparator());
+                    out.append(tab).append(translate.get(14)).append(":  ").append(HexUtils.bin2hex(a.getBytes())).append(System.lineSeparator());
                     if (verbose) {
-                        out.append(" (" + GPUtils.byteArrayToReadableString(a.getBytes()) + ")").append(System.lineSeparator());
+                        out.append(" (").append(GPUtils.byteArrayToReadableString(a.getBytes())).append(")").append(System.lineSeparator());
                     } else {
                         //out.append(System.lineSeparator());
                     }
@@ -1812,10 +1808,10 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
             } else {
                 GPRegistryEntryApp app = (GPRegistryEntryApp) e;
                 if (app.getLoadFile() != null) {
-                    out.append(tab + "From:    " + app.getLoadFile()).append(System.lineSeparator());
+                    out.append(tab).append(translate.get(40)).append(app.getLoadFile()).append(System.lineSeparator());
                 }
                 //if (!app.getPrivileges().isEmpty()) {
-                out.append(tab + "Privs:   " + app.getPrivileges()).append(System.lineSeparator());
+                out.append(tab).append(translate.get(41)).append(app.getPrivileges()).append(System.lineSeparator());
                 //}
             }
             out.append(System.lineSeparator());
@@ -1841,12 +1837,12 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
                         channel = card.getBasicChannel();
                         System.out.println("Reader: " + cardTerminal.getName());
                         System.out.println("ATR: " + HexUtils.bin2hex(card.getATR().getBytes()));
-                        statusMessage.append("Reader: ").append(cardTerminal.getName()).append(System.lineSeparator())
-                                .append("ATR: ").append(HexUtils.bin2hex(card.getATR().getBytes())).append(System.lineSeparator());
+                        statusMessage.append(translate.get(42)).append(cardTerminal.getName()).append(System.lineSeparator())
+                                .append(translate.get(43)).append(HexUtils.bin2hex(card.getATR().getBytes())).append(System.lineSeparator());
                         return true;
                     } catch (CardException e) {
                         System.err.println("Could not connect to " + cardTerminal.getName() + ": " + TerminalManager.getExceptionMessage(e));
-                        statusMessage.append("Could not connect to ").append(cardTerminal.getName()).append(": ").append(TerminalManager.getExceptionMessage(e)).append(System.lineSeparator());
+                        statusMessage.append(translate.get(21)).append(cardTerminal.getName()).append(": ").append(TerminalManager.getExceptionMessage(e)).append(System.lineSeparator());
                     } finally {
                         if (card != null) {
                             card.endExclusive();
@@ -1856,10 +1852,10 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
                     }
                 } else {
                     System.out.println("Card is not present!!!");
-                    statusMessage.append("Card is not present!!!").append(System.lineSeparator());
+                    statusMessage.append(translate.get(22)).append(System.lineSeparator());
                 }
             } catch (CardException ex) {
-                JOptionPane.showMessageDialog(this, ex.getMessage(), "Connect", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this, ex.getMessage(), translate.get(44), JOptionPane.INFORMATION_MESSAGE);
                 Logger.getLogger(JCPlayStoreClient.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
@@ -1916,9 +1912,13 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
                     options.put(content[0], content[1]);
                 }
             }
-            run();
+            if (options.size() == 0) {
+                new JCPlayStoreOptions(file, true).setVisible(true);
+            } else {
+                run();
+            }
         } else {
-            new TranslationSetup(file, options).setVisible(true);
+            new JCPlayStoreOptions(file, true).setVisible(true);
         }
     }
 

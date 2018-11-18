@@ -19,16 +19,14 @@ public class Welcome extends JDialog {
 
     private JDialog context = this;
     private Dimension windowSize;
-    private Translation translation;
 
     private GridBagConstraints constraints;
     private JCPlayStoreClient parent;
 
     private JLabel loading;
 
-    public Welcome(JCPlayStoreClient parent, Translation translation) {
+    public Welcome(JCPlayStoreClient parent) {
         this.parent = parent;
-        this.translation = translation;
         JFrame.setDefaultLookAndFeelDecorated(false); //ugly
         this.setUndecorated(true);
         this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -49,7 +47,7 @@ public class Welcome extends JDialog {
 //        addToLayout(closeIcon(), 5, 0, 1);
         addToLayout(closeIcon(), 6, 0, 1);
         addToLayout(icon("src/img/baseline_usb_black_18dp"), 0, 1, 1);
-        addToLayout(text(translation.get(2)), 1, 1, 3);
+        addToLayout(text(JCPlayStoreClient.translate.get(2)), 1, 1, 3);
         addToLayout(refresh(), 1, 2, 3);
         loading = loading();
         addToLayout(loading, 4, 2,1);
@@ -85,7 +83,7 @@ public class Welcome extends JDialog {
         JLabel label = new JLabel();
         Font c = new Font("Courier", Font.PLAIN, 18);
         label.setFont(c);
-        label.setText(translation.get(6));
+        label.setText(JCPlayStoreClient.translate.get(6));
         label.setSize(windowSize.width, 80);
         label.addMouseListener(new MouseAdapter() {
             @Override
@@ -166,7 +164,7 @@ public class Welcome extends JDialog {
         if (loading.isVisible()) return;
         loading.setVisible(true);
         PauseTransition pause = new PauseTransition( Duration.seconds(1) );
-        //TODO doesn't hide
+        //TODO hide doesn't work
         pause.setOnFinished(event ->
                 loading.setVisible(false)
         );
