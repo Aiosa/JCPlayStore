@@ -165,8 +165,9 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
     private final static int CMD_INSTALL = 2;
     private final static int CMD_DELETE = 3;
 
-    private final static String DEF_AID_COMBO_TXT = "<Please provide AID>";
-    private final static String DEF_CAP_FILE_COMBO_TXT = "<Please provide CAP file path>";
+    //TODO: modified, might not work correctly
+    private final static String DEF_AID_COMBO_TXT = "<Please provide AID>"; //translate.get(30)
+    private final static String DEF_CAP_FILE_COMBO_TXT = "<Please provide CAP file path>"; //translate.get(19)
 
     // Database and app files related constants.
     private final static String JC_APP_DIR = "JCAPPStore";
@@ -892,7 +893,7 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
                     break;
                 case CMD_INSTALL:
                     if (commonComboBox.getSelectedItem() == null || commonComboBox.getSelectedItem().toString().length() == 0
-                            || commonComboBox.getSelectedItem().toString().equals(DEF_CAP_FILE_COMBO_TXT)) {
+                            || commonComboBox.getSelectedItem().toString().equals(translate.get(19))) {
                         JOptionPane.showMessageDialog(this, translate.get(9), translate.get(8), JOptionPane.ERROR_MESSAGE);
                         return;
                     }
@@ -909,7 +910,7 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
                     break;
                 case CMD_DELETE:
                     if (commonComboBox.getSelectedItem() == null || commonComboBox.getSelectedItem().toString().length() == 0
-                            || commonComboBox.getSelectedItem().toString().equals(DEF_AID_COMBO_TXT)) {
+                            || commonComboBox.getSelectedItem().toString().equals(translate.get(30))) {
                         JOptionPane.showMessageDialog(this, translate.get(12), "" +
                                 translate.get(8), JOptionPane.ERROR_MESSAGE);
                         return;
@@ -934,18 +935,18 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
         if (evt.getStateChange() == ItemEvent.SELECTED) {
             System.out.println(translate.get(15) + ": " + evt.getItem());
            //
-            if (evt.getItem().toString().equals(CMD_INSTALL)) {
+            if (evt.getItem().toString().equals(translate.get(29))) {
                 commonButton.setText(translate.get(16));
                 commonLabel.setText(translate.get(17) + ": ");
-                commonComboBox.setModel(new javax.swing.DefaultComboBoxModel<>(new String[]{DEF_CAP_FILE_COMBO_TXT}));
+                commonComboBox.setModel(new javax.swing.DefaultComboBoxModel<>(new String[]{translate.get(19)}));
                 commonComboBox.setEnabled(false);
                 setInstallAppletWidgetsVisible(true);
-            } else if (evt.getItem().toString().equals(CMD_DELETE)) {
+            } else if (evt.getItem().toString().equals(translate.get(8))) {
                 //setInstallAppletWidgetsVisible(false);
                 commonButton.setText(translate.get(18));
                 commonLabel.setText("AID: ");
                 commonComboBox.setEnabled(true);
-                commonComboBox.setModel(new javax.swing.DefaultComboBoxModel<>(new String[]{DEF_AID_COMBO_TXT}));
+                commonComboBox.setModel(new javax.swing.DefaultComboBoxModel<>(new String[]{translate.get(30)}));
                 setInstallAppletWidgetsVisible(true);
             } else {
                 setInstallAppletWidgetsVisible(false);

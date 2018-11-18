@@ -30,7 +30,7 @@
     <string id="27"> already present on card</string>
     <string id="28"> installed.</string>
     <string id="29">Install</string>
-    <!-- 30 free -->
+    <string id="30">&lt;Please provide AID&gt;</string>
     <string id="31">Selected Package AID </string>
     <string id="32">Version: </string>
     <string id="33">contains following applications</string>
