@@ -16,11 +16,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.security.NoSuchAlgorithmException;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -29,14 +25,11 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 import javax.crypto.Cipher;
 import javax.smartcardio.Card;
 import javax.smartcardio.CardChannel;
 import javax.smartcardio.CardException;
 import javax.smartcardio.CardTerminal;
-import javax.smartcardio.CardTerminals;
-import javax.smartcardio.TerminalFactory;
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.filechooser.FileSystemView;
@@ -46,7 +39,6 @@ import joptsimple.OptionSet;
 import pro.javacard.AID;
 import pro.javacard.CAPFile;
 import pro.javacard.gp.GPData;
-import static pro.javacard.gp.GPData.CPLC.toDateFailsafe;
 import static pro.javacard.gp.GPData.fetchCPLC;
 import static pro.javacard.gp.GPData.fetchKeyInfoTemplate;
 import static pro.javacard.gp.GPData.getData;
@@ -179,6 +171,8 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
     static HashMap<String, String> options = new HashMap<>();
     static Translation translate;
 
+    private boolean initialized = false;
+
     /**
      * Creates new form JCPlayStoreClient
      */
@@ -229,11 +223,10 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
                 Logger.getLogger(JCPlayStoreClient.class.getName()).log(Level.SEVERE, null, ex);
             }
 
-            if (!checkTerminals()) {
+            if (!Terminals.checkTerminals(cardReaderMap, (String) args.valueOf(OPT_TERMINALS))) {
                 new Welcome(this).setVisible(true);
             } else {
                 initAppComponents();
-                setVisible(true);
             }
 
         } catch (IOException ex) {
@@ -243,164 +236,48 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
     }
 
     public void initAppComponents() {
+        if (initialized) return;
         initComponents();
         debugRadioButtonMenuItem.setSelected(true);
         commandComboBox.setSelectedIndex(0);
         setInstallAppletWidgetsVisible(false);
         //warningRadioButtonMenuItem.setSelected(true);
-        connectAndCreateTableIfNotExists();
-        insertCardDetailsIfNotExists();
+        databaseCall(Database.CONNECT_AND_CREATE_TABLE_IF_NOT_EXISTS);
+        databaseCall(Database.INSERT_CARD_IF_NOT_EXISTS);
+        setVisible(true);
+        //lock init
+        initialized = true;
     }
 
-    public boolean checkTerminals() {
+    public void databaseCall(int perform) {
+        Database database = null;
         try {
-            final TerminalFactory tf;
-            tf = TerminalManager.getTerminalFactory((String) args.valueOf(OPT_TERMINALS));
-            CardTerminals terminals = tf.terminals();
-            // List terminals if needed
-            System.out.println("# Detected readers from " + tf.getProvider().getName());
-
-            int number = 0;
-            cardReaderMap.clear();
-            for (CardTerminal term : terminals.list()) {
-                number++;
-                cardReaderMap.put(term.getName(), term);
-                System.out.println((term.isCardPresent() ? "[*] " : "[ ] ") + term.getName());
+            //create database connection
+            database = new Database((DB_URL));
+            switch (perform) {
+                case Database.CONNECT:
+                    database.connect();
+                    break;
+                case Database.CONNECT_AND_CREATE_TABLE_IF_NOT_EXISTS:
+                    database.connectAndCreateTableIfNotExists();
+                    break;
+                case Database.INSERT_CARD_IF_NOT_EXISTS:
+                    database.insertCardDetailsIfNotExists(this);
+                    break;
+                default: //DO NOTHING
             }
-
-            if (number == 0) {
-                System.out.println("no readers.");
-                return false;
-            }
-        } catch (NoSuchAlgorithmException | CardException ex) {
-            JOptionPane.showMessageDialog(null, ex.getMessage(), "Start", JOptionPane.INFORMATION_MESSAGE);
-            Logger.getLogger(JCPlayStoreClient.class.getName()).log(Level.SEVERE, null, ex);
-            return false;
-        }
-        return true;
-    }
-
-    public static void connect() {
-        Connection conn = null;
-        try {
-            // create a connection to the database
-            conn = DriverManager.getConnection(DB_URL);
-            System.out.println("Connection to SQLite has been established.");
-            Statement statement = conn.createStatement();
-            statement.setQueryTimeout(30);  // set timeout to 30 sec.
-
-            statement.executeUpdate("drop table if exists person");
-            statement.executeUpdate("create table person (id integer, name string)");
-            statement.executeUpdate("insert into person values(1, 'leo')");
-            statement.executeUpdate("insert into person values(2, 'yui')");
-            ResultSet rs = statement.executeQuery("select * from person");
-            while (rs.next()) {
-                // read the result set
-                System.out.println("name = " + rs.getString("name"));
-                System.out.println("id = " + rs.getInt("id"));
-            }
+            database.connect();
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         } finally {
-            try {
-                if (conn != null) {
-                    conn.close();
-                }
-            } catch (SQLException ex) {
-                System.out.println(ex.getMessage());
-            }
-        }
-    }
-
-    public void connectAndCreateTableIfNotExists() {
-        Connection conn = null;
-        try {
-            // create a connection to the database
-            conn = DriverManager.getConnection(DB_URL);
-            System.out.println("Connection to SQLite has been established.");
-            Statement statement = conn.createStatement();
-            int ret = statement.executeUpdate("create table if not exists card_details (ICFabricator varchar(50),ICSerialNumber varchar(20),ICType varchar(20),OperatingSystemID varchar(20),OperatingSystemReleaseDate varchar(20),OperatingSystemReleaseLevel varchar(20),ICFabricationDate varchar(20),ICBatchIdentifier varchar(20),ICModuleFabricator varchar(20),ICModulePackagingDate varchar(20),ICCManufacturer varchar(20),ICEmbeddingDate varchar(20),ICPrePersonalizer varchar(20),ICPrePersonalizationEquipmentDate varchar(20),ICPrePersonalizationEquipmentID varchar(20),ICPersonalizer varchar(20),ICPersonalizationDate varchar(20),ICPersonalizationEquipmentID varchar(20),ATR varchar(50),INN varchar(50),CIN varchar(50),CardData varchar(200),CardCapability varchar(200),KeyInfo varchar(200),PRIMARY KEY (ICFabricator,ICSerialNumber,ICType))");
-            if (ret == 0) {
-                System.out.println("card_details table created successfully!!!");
-            } else {
-                System.out.println("Failed to create card_details table ");
-            }
-            ret = statement.executeUpdate("create table if not exists card_app (ICFabricator varchar(50),ICSerialNumber varchar(20),ICType varchar(20),AID varchar(50),Version varchar(10),Description varchar(100),PRIMARY KEY (AID,ICFabricator,ICSerialNumber,ICType),FOREIGN KEY (ICFabricator,ICSerialNumber,ICType) REFERENCES card_details (ICFabricator,ICSerialNumber,ICType) ON DELETE CASCADE ON UPDATE NO ACTION)");
-            if (ret == 0) {
-                System.out.println("card_app table created successfully!!!");
-            } else {
-                System.out.println("Failed to create card_app table ");
-            }
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
-        } finally {
-            try {
-                if (conn != null) {
-                    conn.close();
-                }
-            } catch (SQLException ex) {
-                System.out.println(ex.getMessage());
-            }
-        }
-    }
-
-    public void insertCardDetailsIfNotExists() {
-        Connection conn = null;
-        try {
-            // create a connection to the database
-            CardDetails cardDetails = getCardDetails(new StringBuilder());
-
-            if (cardDetails == null) {
-                return;
-            }
-            GPData.CPLC cplc = cardDetails.getCplc();
-
-            if (cplc == null) {
-                System.out.println("No CPLC data");
-                return;
-            }
-            String selectQuery = "select * from card_details where ICFabricator='" + HexUtils.bin2hex(cplc.get(GPData.CPLC.Field.ICFabricator)) + "' and ICSerialNumber='" + HexUtils.bin2hex(cplc.get(GPData.CPLC.Field.ICSerialNumber)) + "' and ICType='" + HexUtils.bin2hex(cplc.get(GPData.CPLC.Field.ICType)) + "'";
-            conn = DriverManager.getConnection(DB_URL);
-            System.out.println("Connection to SQLite has been established.");
-            Statement statement = conn.createStatement();
-            ResultSet rs = statement.executeQuery(selectQuery);
-            if (rs.next()) {
-                System.out.println("Card details already present:" + rs.getString(GPData.CPLC.Field.ICFabricationDate.toString()));
-            } else {
-                String strColNames = Arrays.asList(CardDetailsTableFields.values()).stream().map((CardDetailsTableFields i) -> i.toString()).collect(Collectors.joining(","));
-                String strColValues = Arrays.asList(GPData.CPLC.Field.values()).stream().map((GPData.CPLC.Field i) -> (i.toString().endsWith("Date") ? "'" + toDateFailsafe(cplc.get(i)) + "'" : "'" + HexUtils.bin2hex(cplc.get(i)) + "'")).collect(Collectors.joining(", "));
-                strColValues += ", '" + HexUtils.bin2hex(cardDetails.getAtr().getBytes()) + "', "
-                        + (cardDetails.getInn() != null ? "'" + HexUtils.bin2hex(cardDetails.getInn()) + "'" : null) + ", "
-                        + (cardDetails.getCin() != null ? "'" + HexUtils.bin2hex(cardDetails.getCin()) + "'" : null) + ", "
-                        + (cardDetails.getCardData() != null ? "'" + HexUtils.bin2hex(cardDetails.getCardData()) + "'" : null) + ", "
-                        + (cardDetails.getCardCapabilities() != null ? "'" + HexUtils.bin2hex(cardDetails.getCardCapabilities()) + "'" : null) + ", "
-                        + (cardDetails.getKeyInfo() != null ? "'" + HexUtils.bin2hex(cardDetails.getKeyInfo()) + "'" : null);
-                String insertQuery = "insert into card_details (" + strColNames + ") values (" + strColValues + ")";
-                System.out.println(insertQuery);
-                int ret = statement.executeUpdate(insertQuery);
-                if (ret == 1) {
-                    System.out.println("Record inserted into card_details table successfully!!!");
-                } else {
-                    System.out.println("Failed to insert record");
-                }
-            }
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
-        } finally {
-            try {
-                if (conn != null) {
-                    conn.close();
-                }
-            } catch (SQLException ex) {
-                System.out.println(ex.getMessage());
-            }
+            if (database != null) database.close();
         }
     }
 
     /**
      * Card Production Life Cycle Data (CPLC data)
      */
-    private CardDetails getCardDetails(StringBuilder statusMessage) {
+    public CardDetails getCardDetails(StringBuilder statusMessage) {
         if (cardReaderListComboBox.getSelectedItem() == null) {
             return null;
         }
@@ -844,28 +721,11 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
     }//GEN-LAST:event_listCardReadersMenuItemActionPerformed
 
     private void updateCardReaderListComboBox() {
-        updateCardReaderMap();
+        Terminals.checkTerminals(cardReaderMap, (String) args.valueOf(OPT_TERMINALS));
         cardReaderListComboBox.setModel(new javax.swing.DefaultComboBoxModel<>(cardReaderMap.keySet().toArray(new String[cardReaderMap.size()])));
     }
 
-    private void updateCardReaderMap() {
-        try {
-            cardReaderMap.clear();
-            final TerminalFactory tf;
-            tf = TerminalManager.getTerminalFactory((String) args.valueOf(OPT_TERMINALS));
-            CardTerminals terminals = tf.terminals();
-            // List terminals if needed
-            System.out.println("# Detected readers from " + tf.getProvider().getName() + "Type: " + tf.getType());
-            for (CardTerminal term : terminals.list()) {
-                cardReaderMap.put(term.getName(), term);
-                System.out.println((term.isCardPresent() ? "[*] " : "[ ] ") + term.getName());
-            }
-        } catch (NoSuchAlgorithmException ex) {
-            Logger.getLogger(JCPlayStoreClient.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (CardException ex) {
-            Logger.getLogger(JCPlayStoreClient.class.getName()).log(Level.SEVERE, null, ex);
-        }
-    }
+
     private void goButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_goButtonActionPerformed
         //updateTextArea("", false);
         ///////
@@ -935,13 +795,13 @@ public class JCPlayStoreClient extends javax.swing.JFrame {
         if (evt.getStateChange() == ItemEvent.SELECTED) {
             System.out.println(translate.get(15) + ": " + evt.getItem());
            //
-            if (evt.getItem().toString().equals(translate.get(29))) {
+            if (evt.getItem().toString().equals(translate.get(29))) { // TODO:EVALUATES TRANSLATION
                 commonButton.setText(translate.get(16));
                 commonLabel.setText(translate.get(17) + ": ");
                 commonComboBox.setModel(new javax.swing.DefaultComboBoxModel<>(new String[]{translate.get(19)}));
                 commonComboBox.setEnabled(false);
                 setInstallAppletWidgetsVisible(true);
-            } else if (evt.getItem().toString().equals(translate.get(8))) {
+            } else if (evt.getItem().toString().equals(translate.get(8))) { // TODO:EVALUATES TRANSLATION
                 //setInstallAppletWidgetsVisible(false);
                 commonButton.setText(translate.get(18));
                 commonLabel.setText("AID: ");
